@@ -1,0 +1,827 @@
+#include "codegen.hpp"
+extern SymbolTable symbolTable;
+#define CODE_LENGTH 200
+
+void CodeGenContext::generateCode(ParsingTree& pt)
+{
+	fout<<";Author: Liu Junnan\n\n";
+	EXTDEFS_genCode(pt.root->child);
+}
+
+void CodeGenContext::EXTDEFS_genCode(TreeNode* node)
+{
+	if(node->node_type == "no_def")
+		return;
+	EXTDEF_genCode(node->child);
+	EXTDEFS_genCode(node->child->sibling);
+}
+
+void CodeGenContext::EXTVARS_genCode(TreeNode* node, Configure& config)
+{
+	if(node->node_type == "no_dec")
+		return;
+	else
+	{
+		DEC_genCode(node->child,config);
+		if(node->node_type == "decs")
+		{
+			EXTVARS_genCode(node->child->sibling,config);
+		}
+	}	
+}
+
+void CodeGenContext::EXTDEF_genCode(TreeNode* node)
+{
+	Configure config;
+	config.isGlobal = true;
+	config.type = node->child->type;
+
+	if(node->node_type == "def_var")
+	{
+		SPEC_genCode(node->child);
+		EXTVARS_genCode(node->child->sibling,config);
+	}
+	else if(node->node_type == "def_func")
+	{
+		FUNC_genCode(node->child->sibling,config);
+		STMTBLOCK_genCode(node->child->sibling->sibling);
+	}
+}
+
+void CodeGenContext::SPEC_genCode(TreeNode* node)
+{
+	//find the type. In this project all variables and functions are i32 
+	if(node->node_type == "struct")
+		STSPEC_genCode(node->child);
+	else return;
+}
+
+////////////////////////////////////////////////////
+//unfinished, don't know how to work it out/////////
+////////////////////////////////////////////////////
+void CodeGenContext::STSPEC_genCode(TreeNode* node)
+{
+	/*
+	 * deal with symbol table
+	 */
+	 //
+	 // omit now
+	 //
+
+
+	if(node->node_type == "struct_spec")
+	{
+		//definition of  a structure
+		if(node->child->node_type == "no_tag")
+		{
+			if(anonymousStructNumber == 0)
+				fout<<"  %";
+		}
+	}
+	else
+	{
+
+	}
+}
+
+void CodeGenContext::OPTTAG_genCode(TreeNode* node)
+{
+
+}
+
+void CodeGenContext::VAR_genCode(TreeNode* node)
+{
+
+}
+
+void CodeGenContext::FUNC_genCode(TreeNode* node,Configure& config)
+{
+	//add to symbol table
+	Symbol sym(node->child->name,"func","global");
+	symbolTable.insert(sym);
+
+	//omit now
+	fout<<"\ndefine ";
+	if(config.type == "int")
+		fout<<"i32 ";
+	else if (config.type == "float")
+		fout<<"float ";
+	//can go go further
+
+	//deal with parameters
+	fout<<'@'<<node->child->name<<"(";
+	PARAS_genCode(node->child->sibling);
+	fout<<") ";
+
+}
+
+void CodeGenContext::PARAS_genCode(TreeNode* node)
+{
+//paras,para,no_para
+	if(node->node_type == "paras")
+	{
+		PARA_genCode(node->child);
+		fout<<", ";
+		PARAS_genCode(node->child->sibling);
+	}
+	else if(node->node_type == "para")
+	{
+		PARA_genCode(node->child);	
+	}
+	else
+		return;
+}
+
+void CodeGenContext::PARA_genCode(TreeNode* node)
+{
+	//add to symbol table
+	Symbol sym(node->sibling->name,node->sibling->type,"local");
+	symbolTable.insert(sym);
+
+	node = node->child;
+	SPEC_genCode(node);
+	if(node->node_type == "type_int")
+		fout<<"i32 ";
+	fout<<"  %"<<node->sibling->name;
+}
+
+void CodeGenContext::STMTBLOCK_genCode(TreeNode* node)
+{
+	fout<<"{\n";
+	DEFS_genCode(node->child);
+	STMTS_genCode(node->child->sibling);
+	fout<<"}\n";
+}
+
+void CodeGenContext::STMTS_genCode(TreeNode* node)
+{
+	if(node->node_type == "no_stmt")
+		return;
+	STMT_genCode(node->child);
+	STMTS_genCode(node->child->sibling);
+}
+
+void CodeGenContext::STMT_genCode(TreeNode* node)
+{
+	char* code = new char [CODE_LENGTH];
+	if(node->node_type == "return")
+	{
+		//deal with return
+		if(node->child->node_type == "CONST")
+		{
+			if(node->child->type == "int")
+			{
+				sprintf(code,"  ret i32 %d",node->child->iVal);
+			}
+		}
+		else
+		{
+			//return value is a expression, and cannot determined in compile-time
+			int retRegNum = atoi(EXP_genCode(node->child));
+			sprintf(code,"  ret i32* %%%d",retRegNum);
+		}
+
+		fout<<code<<endl;
+	}
+	else if(node->node_type == "if")
+	{
+		char* expCode = new char[CODE_LENGTH];
+		expCode = EXP_genCode(node->child);
+
+		int tmpNumber=condNumber;
+		condNumber++;
+		fout<<expCode<<"\nif.then"<<tmpNumber<<":\n";
+		STMT_genCode(node->child->sibling);
+		fout<<"  br label %if.end"<<tmpNumber<<"\nif.end"<<tmpNumber<<":\n";
+	}
+	else if(node->node_type == "if_else")
+	{
+		char* expCode = new char[CODE_LENGTH];
+		expCode = EXP_genCode(node->child);
+
+		int tmpNumber = condNumber;
+		condNumber++;
+
+		fout<<expCode<<"\nif.then"<<tmpNumber<<":\n";
+		STMT_genCode(node->child->sibling);
+		fout<<"  br label %if.end"<<tmpNumber<<"\nif.else"<<tmpNumber<<":\n";
+		STMT_genCode(node->child->sibling->sibling);
+		fout<<"  br label %if.end"<<tmpNumber<<":\nif.end"<<tmpNumber<<":\n";
+	}
+	else if(node->node_type == "fexp")
+	{
+		if(node->child->child->node_type == "no_expr")
+			return;
+		else// if(node->child->child->node_type !=)
+		//{
+			FEXP_genCode(node->child);
+		//	cerr<<"Line "<<node->child->lineno<<":error: expression result unused\n";
+		//}
+	}
+}
+
+void CodeGenContext::ESTMT_genCode(TreeNode* node)
+{
+}
+
+void CodeGenContext::DEFS_genCode(TreeNode* node)
+{
+	if(node->node_type == "no_def")
+		return;
+	DEF_genCode(node->child);
+	DEFS_genCode(node->child->sibling);
+}
+
+void CodeGenContext::DEF_genCode(TreeNode* node)
+{
+	Configure config;
+	config.isGlobal = false;
+	config.type = node->child->type;
+
+	SPEC_genCode(node->child);
+	DECS_genCode(node->child->sibling,config);
+}
+
+void CodeGenContext::DECS_genCode(TreeNode* node, Configure& config)
+{
+	DEC_genCode(node->child,config);
+	if(node->node_type == "decs")
+	{
+		DECS_genCode(node->child->sibling,config);
+	}
+}
+
+void CodeGenContext::DEC_genCode(TreeNode* node, Configure& config)
+{
+	if(config.isGlobal)
+	{
+		Symbol sym(node->child->name,config.type,"global");
+		symbolTable.insert(sym);
+
+		fout<<'@'<<node->child->name<<" = global ";
+		if (config.type == "int")
+		{
+			fout<<"i32 ";
+		}
+
+		if (node->node_type == "dec_init")
+		{
+			INIT_genCode(node->child->sibling,config);
+		}
+		else
+		{
+			fout<<"0, align 4\n";	
+		}
+	}
+	else
+	{
+		//local variable
+		Symbol sym(node->child->name,config.type,"local");
+		symbolTable.insert(sym);
+
+		fout<<"  %"<<node->child->name<<" = alloca ";
+		if(config.type == "int")
+		{
+			fout<<"i32";
+		}
+		fout<<", align 4\n";
+
+		if(node->node_type == "dec_init")
+		{
+			INIT_genCode(node->child->sibling,config,node->child->name);
+		}
+	}
+}
+
+void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
+{
+	if(config.isGlobal)
+	{
+		//global variable init
+		if(node->node_type == "set_init")
+		{
+
+		}
+		else 
+		{
+			TreeNode* n = node->child;
+			if(n->node_type == "CONST")
+			{
+				fout<<n->iVal<<", align 4\n";
+			}
+			else 
+			{
+				cerr<<"Line "<<n->lineno<<": error: Initializer element is not a compiler-time constant\n";
+			}
+		}
+	}
+	else
+	{
+		//local variable init
+		if(node->node_type == "set_init")
+		{
+
+		}
+		else 
+		{
+			//exp
+			TreeNode* n = node->child;
+			if(n->node_type == "CONST")
+			{
+				fout<<"  store ";
+				if(config.type == "int")
+					fout<<"i32 "<<n->iVal<<", i32* %"<<name<<", align 4\n";
+			}
+			else 
+			{
+				cerr<<"Line "<<n->lineno<<": error: Initializer element is not a compiler-time constant\n";
+			}
+		}
+	}
+}
+
+char* CodeGenContext::EXP_genCode(TreeNode* node)
+{
+	string nnodetype =  node->node_type;
+	if(nnodetype == "assign")
+	{
+		//LHS must be a ID, cannot be a expression
+		string ncnodetype = node->child->node_type;
+		if(ncnodetype != "ID" && ncnodetype != "array" && ncnodetype != "member" && ncnodetype != "func_call")
+		{
+			cerr<<"Line "<<node->child->lineno<<": lvalue cannot be an expression\n";
+			
+			exit(1);
+		}
+		else if(node->child->node_type == "ID")
+		{
+			SymbolTable::iterator sym_ite = symbolTable.find(node->child->name);
+			if(sym_ite == symbolTable.end())
+			{
+				cerr<<"Line "<<node->child->lineno<<" : error: \'"<<node->child->name<<"\' undeclared\n";
+				exit(1);
+			}
+
+			if(node->child->sibling->node_type == "CONST")
+			{
+				fout<<"  store i32 "<<node->child->sibling->iVal<<", i32* %"<<node->child->name<<", align 4\n";
+			}
+			else
+			{
+				int exp2 = atoi(EXP_genCode(node->child->sibling));
+				fout<<"  store i32 %"<<exp2<<", i32* %"<<node->child->name<<", align 4\n";
+			}
+		}
+		return "";
+	}
+		
+	else if(nnodetype == "ID")
+	{
+		
+		SymbolTable::iterator sym_ite = symbolTable.find(node->child->name);
+		if(sym_ite == symbolTable.end())
+		{
+			cerr<<"Line "<<node->child->lineno<<" : error: \'"<<node->child->name<<"\' undeclared\n";
+			
+			exit(1);
+		}
+		else
+		{
+			if(sym_ite->second.type == "int")	
+			{
+				fout<<"  %"<<tempRegNumber<<" = load i32,"<< "i32* ";
+				if(sym_ite->second.scope == "global")
+				{
+					fout<<"@";
+				}
+				else
+				{
+					fout<<"%";
+				}
+				fout<<sym_ite->second.name<<", align 4\n";
+			}
+			char *ret = new char[10];
+			sprintf(ret,"%d",tempRegNumber);
+			tempRegNumber++;
+
+			return ret;
+		}
+	}
+	else if(nnodetype == "plus")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = add nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = add nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = add nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = add nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "minus")
+	{
+		//all the same as plus
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = sub nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = sub nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = sub nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = sub nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "multiply")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = mul nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = mul nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = mul nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = mul nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "divid")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = sdiv nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = sdiv nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = sdiv nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = sdiv nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "modulo")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = srem nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = srem nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = srem nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = srem nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "bit_and")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = and nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = and nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = and nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = and nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "bit_or")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = or nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = or nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = or nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = or nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "xor")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = xor nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = xor nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = xor nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = xor nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "shift_left")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = shl nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = shl nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = shl nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = shl nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "shift_right")
+	{
+		char* code = new char[CODE_LENGTH];
+
+		bool exp1IsConst = node->child->node_type == "CONST";
+		bool exp2IsConst = node->child->sibling->node_type == "CONST";
+
+		if( exp1IsConst && exp2IsConst )
+		{
+			sprintf(code,"  %%%d = shr nsw i32 %d, %d\n",tempRegNumber++,node->child->iVal,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = shr nsw i32 %%%s, %d\n",tempRegNumber++,op1,node->child->sibling->iVal);
+		}
+		else if( !exp1IsConst && !exp2IsConst )
+		{
+			char* op1 = EXP_genCode(node->child);
+			char* op2 = EXP_genCode(node->child->sibling);
+			sprintf(code,"  %%%d = shr nsw i32 %%%s, %%%s\n",tempRegNumber++,op1,op2);
+		}
+		else
+		{
+			//!exp1IsConst && exp2IsConst
+			char* op1 = EXP_genCode(node->child);
+			sprintf(code,"  %%%d = shr nsw i32 %%%s, %d\n",tempRegNumber,op1,node->child->sibling->iVal);
+		}
+
+		fout<<code;
+		//deal with type error
+		//omit now
+
+		char* ctmp = new char[10];
+		sprintf(ctmp,"%d",tempRegNumber-1);
+		return ctmp;
+	}
+	else if(nnodetype == "less_than")
+	{
+
+	}
+	else if(nnodetype == "greater_than")
+	{
+
+	}
+}
+
+char* CodeGenContext::FEXP_genCode(TreeNode* node)
+{
+	if(node->node_type == "exp")
+		return EXP_genCode(node->child);
+	else
+		return nullptr;
+}
+
+void CodeGenContext::ARRS_genCode(TreeNode* node)
+{
+}
+
+void CodeGenContext::ARGS_genCode(TreeNode* node)
+{
+}
+
+/*
+void deal_with_read(TreeNode* n) {
+	n = n->child;
+	Attr attr = {n->attr.space, 1};
+	n->next->next->attr =  attr;
+	char* args_code = code_ARGS(n->next->next);
+	char ret[CODE_LENGTH] = "";
+	sprintf(ret, "%%call%d", counter++);
+	fprintf(fout, "%s = call i32 (i8*, ...)* @__isoc99_scanf(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), %s)\n", ret, args_code);
+	return;
+}
+
+void deal_with_write(TreeNode* n){
+	n = n->child;
+	char* args_code = code_ARGS(n->next->next);
+	char ret[CODE_LENGTH] = "";
+	sprintf(ret, "%%call%d", counter++);
+	fprintf(fout, "%s = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.str1, i32 0, i32 0), %s)\n", ret, args_code);
+	return;	
+}
+*/
