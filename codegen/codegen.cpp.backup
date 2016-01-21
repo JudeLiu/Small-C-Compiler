@@ -8,7 +8,7 @@ void CodeGenContext::generateCode(ParsingTree& pt)
 	EXTDEFS_genCode(pt.root->child);
 }
 
-void CodeGenContext::EXTDEFS_genCode(TreeNode* node)
+void CodeGenContext::EXTDEFS_genCode(TreeNode** node)
 {
 	if(node->node_type == "no_def")
 		return;
@@ -16,7 +16,7 @@ void CodeGenContext::EXTDEFS_genCode(TreeNode* node)
 	EXTDEFS_genCode(node->child->sibling);
 }
 
-void CodeGenContext::EXTVARS_genCode(TreeNode* node, Configure& config)
+void CodeGenContext::EXTVARS_genCode(TreeNode** node, Configure& config)
 {
 	if(node->node_type == "no_dec")
 		return;
@@ -30,7 +30,7 @@ void CodeGenContext::EXTVARS_genCode(TreeNode* node, Configure& config)
 	}	
 }
 
-void CodeGenContext::EXTDEF_genCode(TreeNode* node)
+void CodeGenContext::EXTDEF_genCode(TreeNode** node)
 {
 	Configure config;
 	config.isGlobal = true;
@@ -48,7 +48,7 @@ void CodeGenContext::EXTDEF_genCode(TreeNode* node)
 	}
 }
 
-void CodeGenContext::SPEC_genCode(TreeNode* node)
+void CodeGenContext::SPEC_genCode(TreeNode** node)
 {
 	//find the type. In this project all variables and functions are i32 
 	if(node->node_type == "struct")
@@ -59,7 +59,7 @@ void CodeGenContext::SPEC_genCode(TreeNode* node)
 ////////////////////////////////////////////////////
 //unfinished, don't know how to work it out/////////
 ////////////////////////////////////////////////////
-void CodeGenContext::STSPEC_genCode(TreeNode* node)
+void CodeGenContext::STSPEC_genCode(TreeNode** node)
 {
 	/*
 	 * deal with symbol table
@@ -84,17 +84,17 @@ void CodeGenContext::STSPEC_genCode(TreeNode* node)
 	}
 }
 
-void CodeGenContext::OPTTAG_genCode(TreeNode* node)
+void CodeGenContext::OPTTAG_genCode(TreeNode** node)
 {
 
 }
 
-void CodeGenContext::VAR_genCode(TreeNode* node)
+void CodeGenContext::VAR_genCode(TreeNode** node)
 {
 
 }
 
-void CodeGenContext::FUNC_genCode(TreeNode* node,Configure& config)
+void CodeGenContext::FUNC_genCode(TreeNode** node,Configure& config)
 {
 	//add to symbol table
 	Symbol sym(node->child->name,"func","global");
@@ -115,7 +115,7 @@ void CodeGenContext::FUNC_genCode(TreeNode* node,Configure& config)
 
 }
 
-void CodeGenContext::PARAS_genCode(TreeNode* node)
+void CodeGenContext::PARAS_genCode(TreeNode** node)
 {
 //paras,para,no_para
 	if(node->node_type == "paras")
@@ -132,7 +132,7 @@ void CodeGenContext::PARAS_genCode(TreeNode* node)
 		return;
 }
 
-void CodeGenContext::PARA_genCode(TreeNode* node)
+void CodeGenContext::PARA_genCode(TreeNode** node)
 {
 	//add to symbol table
 	Symbol sym(node->sibling->name,node->sibling->type,"local");
@@ -145,7 +145,7 @@ void CodeGenContext::PARA_genCode(TreeNode* node)
 	fout<<"  %"<<node->sibling->name;
 }
 
-void CodeGenContext::STMTBLOCK_genCode(TreeNode* node)
+void CodeGenContext::STMTBLOCK_genCode(TreeNode** node)
 {
 	fout<<"{\n";
 	DEFS_genCode(node->child);
@@ -153,7 +153,7 @@ void CodeGenContext::STMTBLOCK_genCode(TreeNode* node)
 	fout<<"}\n";
 }
 
-void CodeGenContext::STMTS_genCode(TreeNode* node)
+void CodeGenContext::STMTS_genCode(TreeNode** node)
 {
 	if(node->node_type == "no_stmt")
 		return;
@@ -161,7 +161,7 @@ void CodeGenContext::STMTS_genCode(TreeNode* node)
 	STMTS_genCode(node->child->sibling);
 }
 
-void CodeGenContext::STMT_genCode(TreeNode* node)
+void CodeGenContext::STMT_genCode(TreeNode** node)
 {
 	char* code = new char [CODE_LENGTH];
 	if(node->node_type == "return")
@@ -220,11 +220,11 @@ void CodeGenContext::STMT_genCode(TreeNode* node)
 	}
 }
 
-void CodeGenContext::ESTMT_genCode(TreeNode* node)
+void CodeGenContext::ESTMT_genCode(TreeNode** node)
 {
 }
 
-void CodeGenContext::DEFS_genCode(TreeNode* node)
+void CodeGenContext::DEFS_genCode(TreeNode** node)
 {
 	if(node->node_type == "no_def")
 		return;
@@ -232,7 +232,7 @@ void CodeGenContext::DEFS_genCode(TreeNode* node)
 	DEFS_genCode(node->child->sibling);
 }
 
-void CodeGenContext::DEF_genCode(TreeNode* node)
+void CodeGenContext::DEF_genCode(TreeNode** node)
 {
 	Configure config;
 	config.isGlobal = false;
@@ -242,7 +242,7 @@ void CodeGenContext::DEF_genCode(TreeNode* node)
 	DECS_genCode(node->child->sibling,config);
 }
 
-void CodeGenContext::DECS_genCode(TreeNode* node, Configure& config)
+void CodeGenContext::DECS_genCode(TreeNode** node, Configure& config)
 {
 	DEC_genCode(node->child,config);
 	if(node->node_type == "decs")
@@ -251,7 +251,7 @@ void CodeGenContext::DECS_genCode(TreeNode* node, Configure& config)
 	}
 }
 
-void CodeGenContext::DEC_genCode(TreeNode* node, Configure& config)
+void CodeGenContext::DEC_genCode(TreeNode** node, Configure& config)
 {
 	if(config.isGlobal)
 	{
@@ -293,7 +293,7 @@ void CodeGenContext::DEC_genCode(TreeNode* node, Configure& config)
 	}
 }
 
-void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
+void CodeGenContext::INIT_genCode(TreeNode** node,Configure& config, string name)
 {
 	if(config.isGlobal)
 	{
@@ -304,7 +304,7 @@ void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
 		}
 		else 
 		{
-			TreeNode* n = node->child;
+			TreeNode** n = node->child;
 			if(n->node_type == "CONST")
 			{
 				fout<<n->iVal<<", align 4\n";
@@ -325,7 +325,7 @@ void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
 		else 
 		{
 			//exp
-			TreeNode* n = node->child;
+			TreeNode** n = node->child;
 			if(n->node_type == "CONST")
 			{
 				fout<<"  store ";
@@ -340,7 +340,7 @@ void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
 	}
 }
 
-char* CodeGenContext::EXP_genCode(TreeNode* node)
+char* CodeGenContext::EXP_genCode(TreeNode** node)
 {
 	string nnodetype =  node->node_type;
 	if(nnodetype == "assign")
@@ -788,7 +788,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 	}
 }
 
-char* CodeGenContext::FEXP_genCode(TreeNode* node)
+char* CodeGenContext::FEXP_genCode(TreeNode** node)
 {
 	if(node->node_type == "exp")
 		return EXP_genCode(node->child);
@@ -796,16 +796,16 @@ char* CodeGenContext::FEXP_genCode(TreeNode* node)
 		return nullptr;
 }
 
-void CodeGenContext::ARRS_genCode(TreeNode* node)
+void CodeGenContext::ARRS_genCode(TreeNode** node)
 {
 }
 
-void CodeGenContext::ARGS_genCode(TreeNode* node)
+void CodeGenContext::ARGS_genCode(TreeNode** node)
 {
 }
 
 /*
-void deal_with_read(TreeNode* n) {
+void deal_with_read(TreeNode** n) {
 	n = n->child;
 	Attr attr = {n->attr.space, 1};
 	n->next->next->attr =  attr;
@@ -816,7 +816,7 @@ void deal_with_read(TreeNode* n) {
 	return;
 }
 
-void deal_with_write(TreeNode* n){
+void deal_with_write(TreeNode** n){
 	n = n->child;
 	char* args_code = code_ARGS(n->next->next);
 	char ret[CODE_LENGTH] = "";

@@ -77,4 +77,3 @@ void ParsingTree::__printTree(TreeNode* root)
 	indent.erase(indent.length()-2,indent.length());//delete the last "\t"
 	__printTree(root->sibling);
 }
-

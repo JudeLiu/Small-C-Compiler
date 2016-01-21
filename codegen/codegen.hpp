@@ -5,14 +5,12 @@
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
+#include <memory>
 #include <string.h>
 #include "ParsingTree.h"
 #include "SymbolTable.h"
 
 extern SymbolTable symbolTable;
-//static std::unique_ptr<Module> *TheModule;
-//static IRBuilder Builder(getGlobalContext());
-//static std::map<std::string,Value*> NamedValues;
 
 struct Configure
 {
@@ -33,8 +31,8 @@ private:
 	void OPTTAG_genCode(TreeNode*);
 	void VAR_genCode(TreeNode*,Configure&);
 	void FUNC_genCode(TreeNode*,Configure&);
-	//void PARAS_genCode(TreeNode*);
-	//void PARA_genCode(TreeNode*);
+	//void PARAS_genCode(TreeNode**);
+	//void PARA_genCode(TreeNode**);
 	void STMTBLOCK_genCode(TreeNode*);
 	void STMTS_genCode(TreeNode*);
 	void STMT_genCode(TreeNode*);
@@ -52,7 +50,7 @@ private:
 	char* ARGS_genCode(TreeNode*);
 
 public:
-	CodeGenContext(char* fname) 
+	CodeGenContext(string fname) 
 	{
 		init();
 		anonymousStructNumber = 1;
@@ -94,32 +92,4 @@ private:
 		return scopeAndIsarg(node->name);
 	}
 };
-
-/*
-class ExprAST
-{
-public:
-        virtual ~ExprAST() {}
-        virtual Value* codegen() = 0;
-};
-
-class NumberExprAST : public ExprAST
-{
-    double Val;
-
-public:
-    NumberExprAST(double Val):Val(Val) {}
-    virtual Value* codegen();
-};
-    Value* NumberExprAST::codegen()
-{
-     return ConstFP::get(getGlobalContext(),APFloat(Val));
-}
-
-value *ErrorV(const char* Str)
-{
-    Error(Str);
-    return nullptr;
-}
-*/
 #endif //"CODEGEN_H"

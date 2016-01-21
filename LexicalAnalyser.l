@@ -2,6 +2,7 @@
 #include "ParsingTree.h"
 #include "SymbolTable.h"
 #include "y.tab.hpp"
+#include <memory>
 #include <cstdlib>
 
 #ifdef DEBUG
@@ -92,7 +93,7 @@ int yywrap()
 
 void check_dec()
 {
-	TreeNode* ret=new TreeNode(yylineno);
+	TreeNode* ret(new TreeNode(yylineno));
 	if(*yytext == '-')
 		ret->iVal = -1 * atoi(yytext+1);
 	else
@@ -105,7 +106,7 @@ void check_dec()
 
 void check_hex()
 {
-	TreeNode* ret = new TreeNode(yylineno);
+	TreeNode* ret(new TreeNode(yylineno));
 	char* p = yytext;
 	int sign = 1;
 	if(*p=='-')
@@ -137,7 +138,7 @@ void check_hex()
 
 void check_oct()
 {
-	TreeNode* ret = new TreeNode(yylineno);
+	TreeNode* ret(new TreeNode(yylineno));
 	char* p = yytext;
 	int sign = 1;
 	if(*p == '-')
@@ -164,7 +165,7 @@ void check_oct()
 
 void int_error()
 {
-	TreeNode* ret = new TreeNode(yylineno);
+	TreeNode* ret(new TreeNode(yylineno));
 	
 	ret->iVal = 0;
 	ret->node_type = "ERROR_CONST";
@@ -175,7 +176,7 @@ void int_error()
 
 void check_id() 
 {
-	TreeNode* ret=new TreeNode(yylineno);
+	TreeNode* ret(new TreeNode(yylineno));
 	ret->name = (string)yytext;
 	ret->node_type = "ID";
 	ret->type = "int";

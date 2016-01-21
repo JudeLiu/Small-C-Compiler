@@ -23,8 +23,13 @@ public:
 	string structName;
 	int structIdx;
 
-	Symbol(string n,string t="int",string s="local",int as=1,int para=0) : name(n),type(t),scope(s),	\
-		arrSize(as),paraNum(para)
+	Symbol(string n,string t="int",string s="local",int as=1,int para=0) : 
+		name(n),
+		type(t),
+		scope(s),
+		arrSize(as),
+		paraNum(para),
+		structName("")
 	{}
 	
 	bool operator==(const Symbol& sym) const 
