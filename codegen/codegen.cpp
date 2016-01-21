@@ -19,7 +19,7 @@ void CodeGenContext::generateCode(ParsingTree& pt)
 	if(!symbolTable.exist("main"))
 	{
 		cerr<<"do not have the entrance function \'main\'\n";
-		fout.close();
+		close();
 		exit(1);
 	}
 
@@ -142,7 +142,7 @@ void CodeGenContext::VAR_genCode(TreeNode* node, Configure& config)
 		if(symbolTable.exist(node->name))
 		{
 			cerr<<"Line "<<node->lineno<<":error: \'"<<node->name<<"\' is multi-defined \n";
-			fout.close();
+			close();
 			exit(1);
 		}
 
@@ -151,7 +151,7 @@ void CodeGenContext::VAR_genCode(TreeNode* node, Configure& config)
 		{
 			cerr<<"Line "<<node->child->sibling->lineno<<":error: length of array \'"
 				<<node->name<<"\' must be fixed\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 
@@ -163,7 +163,7 @@ void CodeGenContext::VAR_genCode(TreeNode* node, Configure& config)
 		if(symbolTable.exist(node->name))
 		{
 			cerr<<"Line "<<node->lineno<<":error: \'"<<node->name<<"\' is multi-defined \n";
-			fout.close();
+			close();
 			exit(1);
 		}
 
@@ -176,7 +176,7 @@ void CodeGenContext::VAR_genCode(TreeNode* node, Configure& config)
 		if(symbolTable.exist(node->name))
 		{
 			cerr<<"Line "<<node->lineno<<":error: \'"<<node->name<<"\' is multi-defined \n";
-			fout.close();
+			close();
 			exit(1);
 		}
 
@@ -534,7 +534,7 @@ void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
 					if(node->child->node_type != "CONST")
 					{
 						cerr<<"Line "<<node->lineno<<":error: initializer element is not a comiler-time constant\n";
-						fout.close();
+						close();
 						exit(1);
 					}
 					tempResult[i] = node->child->iVal;
@@ -564,7 +564,7 @@ void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
 			else 
 			{
 				cerr<<"Line "<<n->lineno<<": error: initializer element is not a compiler-time constant\n";
-				fout.close();
+				close();
 				exit(1);
 			}
 		}
@@ -599,7 +599,7 @@ void CodeGenContext::INIT_genCode(TreeNode* node,Configure& config, string name)
 				if(node->child->node_type != "CONST")
 				{
 					cerr<<"Line "<<node->lineno<<":error: initializer element is not a comiler-time constant\n";
-					fout.close();
+					close();
 					exit(1);
 				}
 				tempResult[i] = node->child->iVal;
@@ -709,7 +709,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 			if(!symbolTable.exist(name))
 			{
 				cerr<<"Line "<<node->child->child->lineno<<":error: \' "<<name<<"\' undeclared\n";
-				fout.close();
+				close();
 				exit(1);
 			}
 			
@@ -717,14 +717,14 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 			{
 				cerr<<"Line "<<node->child->child->lineno<<":error: request for member \'"
 					<<memberName<<"\' in something not a structure\n";
-				fout.close();
+				close();
 				exit(1);
 			}
 
 			if(!symbolTable.exist(memberName))
 			{
 				cerr<<"Line "<<node->child->child->sibling->lineno<<":error: \'"<<memberName<<"\' undeclared\n";
-				fout.close();
+				close();
 				exit(1);
 			}
 			
@@ -737,7 +737,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 			{
 				cerr<<"Line "<<node->child->sibling->lineno<<":error: no member named \'"
 					<<memberName<<"\' in 'struct "<<structName<<"\'\n";
-				fout.close();
+				close();
 				exit(1);
 			}
 
@@ -810,13 +810,13 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 		if(!symbolTable.exist(name))
 		{
 			cerr<<"Line "<<node->child->lineno<<":error: \' "<<name<<"\' undeclared\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 		if(!symbolTable.exist(memberName))
 		{
 			cerr<<"Line "<<node->child->sibling->lineno<<":error: \'"<<memberName<<"\' undeclared\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 
@@ -827,14 +827,14 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 		if(thisStruct.type != "struct")
 		{
 			cerr<<"Line "<<node->child->lineno<<"error: \'"<<thisStruct.name<<"\' is not a struct\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 		if(memberSym.structName != structName)
 		{
 			cerr<<"Line "<<node->child->sibling->lineno<<":error: no member named \'"
 				<<memberName<<"\' in 'struct "<<structName<<"\'\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 		int memberIdx = memberSym.structIdx;
@@ -856,14 +856,14 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 		if(sym_ite == symbolTable.end())
 		{
 			cerr<<"Line "<<node->child->lineno<<":error: \'"<<name<<"\' undeclared\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 
 		if(sym_ite->second.type != "array")
 		{
 			cerr<<"Line "<<node->lineno<<":error: subscripted value is not array\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 		vector<string> scopeAndISarg = scopeAndIsarg(name);
@@ -932,13 +932,13 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 				if(!symbolTable.exist(name))
 				{
 					cerr<<"Line "<<memberNode->child->lineno<<":error: \' "<<name<<"\' undeclared\n";
-					fout.close();
+					close();
 					exit(1);
 				}
 				if(!symbolTable.exist(memberName))
 				{
 					cerr<<"Line "<<memberNode->child->sibling->lineno<<":error: \'"<<memberName<<"\' undeclared\n";
-					fout.close();
+					close();
 					exit(1);
 				}
 
@@ -950,7 +950,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 				{
 					cerr<<"Line "<<node->child->sibling->lineno<<":error: no member named \'"
 						<<memberName<<"\' in 'struct "<<structName<<"\'\n";
-					fout.close();
+					close();
 					exit(1);
 				}
 
@@ -967,7 +967,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 			else
 			{
 				cerr<<"Line "<<node->child->sibling->lineno<<":error: args of function \'read\' should be a variable\n";
-				fout.close();
+				close();
 				exit(1);
 			}
 			fout<<code;
@@ -1005,7 +1005,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
   			if(!symbolTable.exist(node->child->name))
   			{
   				cerr<<"Line "<<node->child->lineno<<"error: function \'"<<node->child->name<<"\n undeclared\n";
-  				fout.close();
+  				close();
   				exit(1);
   			}
 
@@ -1047,14 +1047,14 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
   			{
   				cerr<<"Line "<<node->child->lineno<<":error: too many arguments to call function \'"<<sym.name<<"\', expected "
   					<<sym.paraNum<<", have "<<args.size()<<endl;
-  				fout.close();
+  				close();
   				exit(1);
   			}
   			else if(args.size() < sym.paraNum)
   			{
   				cerr<<"Line "<<node->child->lineno<<":error: too few arguments to call function \'"<<sym.name<<"\', expected "<<
   					sym.paraNum<<", have "<<args.size()<<endl;
-  				fout.close();
+  				close();
   				exit(1);
   			}
 
@@ -1333,7 +1333,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 		if(!symbolTable.exist(ncName))
 		{
 			cerr<<"Line "<<node->child->lineno<<"error: \'"<<ncName<<"\' undeclared\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 
@@ -1367,7 +1367,7 @@ char* CodeGenContext::EXP_genCode(TreeNode* node)
 		if(node->child->node_type != "ID")
 		{
 			cerr<<"Line "<<node->child->lineno<<"error: lvalue cannot be an expression\n";
-			fout.close();
+			close();
 			exit(1);
 		}
 

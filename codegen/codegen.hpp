@@ -62,6 +62,7 @@ public:
 		init();
 		anonymousStructNumber = 1;
 		fout.open(fname,ofstream::out);
+		openFileName = fname;
 	}
 	~CodeGenContext() {fout.close();}
 
@@ -75,12 +76,21 @@ public:
 
 private:	
 	std::ofstream fout;
+	string openFileName;
 	int anonymousStructNumber;
 	int tempRegNumber;
 	int ifNumber;
 	int ifelseNumber;
 	int forNumber;
 	int bexprNumber;
+
+	void close()
+	{
+		fout.close();
+		fout.open(openFileName);
+		fout<<"Error.";
+		fout.close();
+	}
 
 	std::vector<std::string> scopeAndIsarg(std::string name)
 	{
