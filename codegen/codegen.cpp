@@ -1,8 +1,7 @@
 /**
  *  @file codegen.cpp
  *
- * @@brief This file generates LLVM intermediate representation
- * from small-c source code.
+ *  @brief This file generates LLVM intermediate representation from small-c source code.
  */
  
 #include "codegen.hpp"
