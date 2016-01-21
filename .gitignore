@@ -1,1 +1,3 @@
 *.odt
+README
+!README.md
