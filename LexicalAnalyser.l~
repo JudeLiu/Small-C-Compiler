@@ -2,8 +2,7 @@
 /**
  *  @file LexicalAnalyser.l
  *
- *  @brief This file is a flex tokenizer. It will return a symbol to 
- *  yacc file when it is called.
+ *  @brief This file is a flex tokenizer. It will return a symbol to yacc file when it is called.
  */
 #include "ParsingTree.h"
 #include "SymbolTable.h"

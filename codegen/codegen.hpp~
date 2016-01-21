@@ -1,3 +1,8 @@
+/*
+ * This file declares the class CodeGenContext that is used to 
+ * generate LLVM IR, struct Configure is used as argument when
+ * generating LLVM IR.
+ */
 #ifndef __CODEGEN_H
 #define __CODEGEN_H
 
@@ -5,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
+#include <memory>
 #include <string.h>
 #include "ParsingTree.h"
 #include "SymbolTable.h"
@@ -21,32 +27,32 @@ struct Configure
 class CodeGenContext
 {
 private:
-	void EXTDEFS_genCode(TreeNode**);
-	void EXTDEF_genCode(TreeNode**);
-	void EXTVARS_genCode(TreeNode**);
-	void EXTVARS_genCode(TreeNode**,Configure&);
-	string SPEC_genCode(TreeNode**);
-	string STSPEC_genCode(TreeNode**);
-	void OPTTAG_genCode(TreeNode**);
-	void VAR_genCode(TreeNode**,Configure&);
-	void FUNC_genCode(TreeNode**,Configure&);
+	void EXTDEFS_genCode(TreeNode*);
+	void EXTDEF_genCode(TreeNode*);
+	void EXTVARS_genCode(TreeNode*);
+	void EXTVARS_genCode(TreeNode*,Configure&);
+	string SPEC_genCode(TreeNode*);
+	string STSPEC_genCode(TreeNode*);
+	void OPTTAG_genCode(TreeNode*);
+	void VAR_genCode(TreeNode*,Configure&);
+	void FUNC_genCode(TreeNode*,Configure&);
 	//void PARAS_genCode(TreeNode**);
 	//void PARA_genCode(TreeNode**);
-	void STMTBLOCK_genCode(TreeNode**);
-	void STMTS_genCode(TreeNode**);
-	void STMT_genCode(TreeNode**);
-	void ESTMT_genCode(TreeNode**);
-	void DEFS_genCode(TreeNode**);
-	void DEF_genCode(TreeNode**);
-	void DECS_genCode(TreeNode**,Configure&);
-	void DEC_genCode(TreeNode**,Configure&);
-	void INIT_genCode(TreeNode**,Configure&,string name="");
-	char* EXP_genCode(TreeNode**);
-	char* FEXP_genCode(TreeNode**);
-	char* CondFEXP_genCode(TreeNode**);//condition expression
-	char* CondEXP_genCode(TreeNode**);
-	void ARRS_genCode(TreeNode**);
-	char* ARGS_genCode(TreeNode**);
+	void STMTBLOCK_genCode(TreeNode*);
+	void STMTS_genCode(TreeNode*);
+	void STMT_genCode(TreeNode*);
+	void ESTMT_genCode(TreeNode*);
+	void DEFS_genCode(TreeNode*);
+	void DEF_genCode(TreeNode*);
+	void DECS_genCode(TreeNode*,Configure&);
+	void DEC_genCode(TreeNode*,Configure&);
+	void INIT_genCode(TreeNode*,Configure&,string name="");
+	char* EXP_genCode(TreeNode*);
+	char* FEXP_genCode(TreeNode*);
+	char* CondFEXP_genCode(TreeNode*);//condition expression
+	char* CondEXP_genCode(TreeNode*);
+	void ARRS_genCode(TreeNode*);
+	char* ARGS_genCode(TreeNode*);
 
 public:
 	CodeGenContext(string fname) 
@@ -86,37 +92,9 @@ private:
 		return ans;
 	}
 
-	inline std::vector<std::string> scopeAndIsarg(TreeNode** node)
+	inline std::vector<std::string> scopeAndIsarg(TreeNode* node)
 	{
 		return scopeAndIsarg(node->name);
 	}
 };
-
-/*
-class ExprAST
-{
-public:
-        virtual ~ExprAST() {}
-        virtual Value* codegen() = 0;
-};
-
-class NumberExprAST : public ExprAST
-{
-    double Val;
-
-public:
-    NumberExprAST(double Val):Val(Val) {}
-    virtual Value* codegen();
-};
-    Value* NumberExprAST::codegen()
-{
-     return ConstFP::get(getGlobalContext(),APFloat(Val));
-}
-
-value *ErrorV(const char* Str)
-{
-    Error(Str);
-    return nullptr;
-}
-*/
 #endif //"CODEGEN_H"

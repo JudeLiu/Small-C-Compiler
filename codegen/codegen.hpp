@@ -1,3 +1,10 @@
+/**
+ * @file codegen.hpp
+ *
+ * @brief This file declares the class CodeGenContext that is used to 
+ * generate LLVM IR, struct Configure is used as argument when
+ * generating LLVM IR.
+ */
 #ifndef __CODEGEN_H
 #define __CODEGEN_H
 
